@@ -9,6 +9,7 @@ const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const cloudinary = require("cloudinary").v2;
 const Author = require("../models/authorModel");
+const Category = require("../models/categoryModel");
 
 
 
@@ -184,59 +185,134 @@ router.get("/getsession", (req, res) => {
 
 // =====================================ADMIN MODULE=====================================================
 
+
+// api to create new author
 router.post("/addAuthor", upload.single("image"), async (req, res) => {
     try {
-        
+
         const authorName = req.body.authorName;
         const authorDesc = req.body.authorDesc;
         const image = req.file.path
         const token = uuidv4();
-    
+
         const errors = [];
-    
+
         const cloudinaryResultUpdate = await cloudinary.uploader.upload(image, { folder: "e_library_author_image" }, function (err, result) {
             if (err) {
                 res.status(401).json({ err });
             }
         })
-    
+
         const imageUrl = cloudinaryResultUpdate.secure_url
-    
+
         if (!authorName) {
             errors.push("Please enter the author name");
         }
-        if(!authorDesc){
+        if (!authorDesc) {
             errors.push("Please enter some description about author");
         }
-        if(!image){
+        if (!image) {
             errors.push("Please upload an image")
         }
-    
+
         const authorSave = new Author({
             authorName,
             authorDesc,
-            image:imageUrl,
+            image: imageUrl,
             token
         });
-    
+
         const savedUser = await authorSave.save();
-    
-        if(!savedUser){
-            res.status(401).json({message:"User not saved"});
-        }else{
-            res.status(200).json({message:"User has been registered"});
+
+        if (!savedUser) {
+            res.status(401).json({ message: "User not saved" });
+        } else {
+            res.status(200).json({ message: "User has been registered" });
         }
     } catch (error) {
         console.log(error);
-        res.status(401).json({error});
+        res.status(401).json({ error });
     }
 
 })
 
 
 
+// api to create new category
+router.post("/addCategory", upload.single("image"), async (req, res) => {
+    try {
+
+        const categoryName = req.body.categoryName;
+        const categoryDesc = req.body.categoryDesc;
+        const image = req.file.path
+        const token = uuidv4();
+
+        const errors = [];
+
+        const cloudinaryResultUpdate = await cloudinary.uploader.upload(image, { folder: "e_library_category_image" }, function (err, result) {
+            if (err) {
+                res.status(401).json({ err });
+            }
+        })
+
+        const imageUrl = cloudinaryResultUpdate.secure_url
+
+        if (!categoryName) {
+            errors.push("Please enter the author name");
+        }
+        if (!categoryDesc) {
+            errors.push("Please enter some description about author");
+        }
+        if (!image) {
+            errors.push("Please upload an image")
+        }
+
+        const categorySave = new Category({
+            categoryName,
+            categoryDesc,
+            image: imageUrl,
+            token
+        });
+
+        const savedCategory = await categorySave.save();
+
+        if (!savedCategory) {
+            res.status(401).json({ message: "User not saved" });
+        } else {
+            res.status(200).json({ message: "User has been registered" });
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(401).json({ error });
+    }
+
+})
 
 
+// api to get all authors
+router.get("/addAuthor", (req, res) => {
+    Author.find()
+        .exec()
+        .then((data) => {
+            res.status(200).json({ data });
+        })
+        .catch((error) => {
+            res.status(401).json({ error });
+        })
+})
+
+
+// api to get all categories
+router.get("/addCategory", (req, res) => {
+    Author.find()
+        .exec()
+        .then((data) => {
+            res.status(200).json({ data });
+        })
+        .catch((error) => {
+            res.status(401).json({ error });
+        })
+})
 
 
 
