@@ -3,11 +3,35 @@ const router = express.Router();
 const User = require("../models/users");
 const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const cloudinary = require("cloudinary").v2;
+const Author = require("../models/authorModel");
 
 
+
+// multer configs
+const storage = multer.diskStorage({
+    filename: function (req, file, cb) {
+        cb(null, file.originalname)
+    }
+});
+
+const upload = multer({ storage: storage });
+
+// ends here
+
+// cloudinary configs
+
+cloudinary.config({
+    cloud_name: 'djrh8oflc',
+    api_key: '544113442678141',
+    api_secret: 'G6AKEYGFz2eiEcVHXg-4myu5cXg'
+});
+
+// ends here
 
 
 // registration api starts
@@ -34,13 +58,13 @@ router.post("/register", async (req, res) => {
     if (!confPassword) {
         errors.push("Please enter a password");
     }
-    if(number.length !== 10){
+    if (number.length !== 10) {
         errors.push("Number should be 10 digits long");
     }
     if (!password) {
         errors.push("Please enter a password");
     }
-    if(password !== confPassword){
+    if (password !== confPassword) {
         errors.push("Password and Confirm Password should be same");
     }
     if (!validator.isEmail(email)) {
@@ -97,10 +121,10 @@ router.post("/login", async (req, res) => {
     if (!password) {
         errors.push("Please provide the password");
     }
-    if(!validator.isEmail(email)){
+    if (!validator.isEmail(email)) {
         errors.push("Please enter a valid email");
     }
-    if(sessionStorage){
+    if (sessionStorage) {
         errors.push("You are already logged in");
     }
 
@@ -124,7 +148,7 @@ router.post("/login", async (req, res) => {
         }
         else {
             const userData = user;
-            req.session.userInfo = {userToken: user.token, userEmail: user.email};
+            req.session.userInfo = { userToken: user.token, userEmail: user.email };
             res.status(201).send({ userData, message: "Logged in" });
         }
     }
@@ -134,12 +158,12 @@ router.post("/login", async (req, res) => {
 
 
 // logout api
-router.get("/logout", (req,res)=>{
-    req.session.destroy((err)=>{
-        if(err){
-            res.status(401).json({err})
-        }else{
-            res.status(200).send({message:"Successfully logged out"});
+router.get("/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(401).json({ err })
+        } else {
+            res.status(200).send({ message: "Successfully logged out" });
         }
     })
 })
@@ -147,16 +171,67 @@ router.get("/logout", (req,res)=>{
 
 
 // api to print sessions
-router.get("/getsession", (req, res)=>{
+router.get("/getsession", (req, res) => {
     const user = req.session.userInfo;
-    if(user){
+    if (user) {
         console.log(user);
-    }else{
-        res.status(200).json({message:"No session"});
+    } else {
+        res.status(200).json({ message: "No session" });
     }
 })
 // ends here
 
+
+// =====================================ADMIN MODULE=====================================================
+
+router.post("/addAuthor", upload.single("image"), async (req, res) => {
+    try {
+        
+        const authorName = req.body.authorName;
+        const authorDesc = req.body.authorDesc;
+        const image = req.file.path
+        const token = uuidv4();
+    
+        const errors = [];
+    
+        const cloudinaryResultUpdate = await cloudinary.uploader.upload(image, { folder: "e_library_author_image" }, function (err, result) {
+            if (err) {
+                res.status(401).json({ err });
+            }
+        })
+    
+        const imageUrl = cloudinaryResultUpdate.secure_url
+    
+        if (!authorName) {
+            errors.push("Please enter the author name");
+        }
+        if(!authorDesc){
+            errors.push("Please enter some description about author");
+        }
+        if(!image){
+            errors.push("Please upload an image")
+        }
+    
+        const authorSave = new Author({
+            authorName,
+            authorDesc,
+            image:imageUrl,
+            token
+        });
+    
+        const savedUser = await authorSave.save();
+    
+        if(!savedUser){
+            res.status(401).json({message:"User not saved"});
+        }else{
+            res.status(200).json({message:"User has been registered"});
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(401).json({error});
+    }
+
+})
 
 
 
