@@ -10,6 +10,7 @@ const bcrypt = require("bcryptjs");
 const cloudinary = require("cloudinary").v2;
 const Author = require("../models/authorModel");
 const Category = require("../models/categoryModel");
+const Book = require("../models/book");
 
 
 
@@ -312,6 +313,76 @@ router.get("/addCategory", (req, res) => {
         .catch((error) => {
             res.status(401).json({ error });
         })
+})
+
+// api to add books by admin
+
+router.post("/addBooks", upload.single("image"), async (req, res) => {
+    try {
+
+        const bookName = req.body.bookName;
+        const bookDesc = req.body.bookDesc;
+        const image = req.file.path;
+        const token = uuidv4();
+        const bookCategoryName = req.body.bookCategoryName;
+        const bookAuthorName = req.body.bookAuthorName;
+        const bookCategoryToken = req.body.bookCategoryToken;
+        const bookAuthorToken = req.body.bookAuthorToken;
+
+        const errors = [];
+
+
+        if (!bookName) {
+            errors.push("Please enter book name");
+            return res.status(400).json({ errors });
+        }
+        if (!bookDesc) {
+            errors.push("Please enter book description");
+            return res.status(400).json({ errors });
+        }
+        if (!image) {
+            errors.push("Please enter book image");
+            return res.status(400).json({ errors });
+        }
+        if (!bookCategoryName) {
+            errors.push("Please choose book category name");
+            return res.status(400).json({ errors });
+        }
+        if (!bookAuthorName) {
+            errors.push("Please choose book Author name");
+            return res.status(400).json({ errors });
+        }
+
+
+        const imageUploadResult = await cloudinary.uploader.upload(image, { folder: "book_upload_image" }, function (err, result) {
+            if (err) {
+                res.status(401).json({ err });
+            }
+        })
+
+        imageUrl = imageUploadResult.secure_url;
+
+        const bookSave = new Book({
+            bookName,
+            bookDesc,
+            image: imageUrl,
+            token,
+            bookAuthorName,
+            bookCategoryName,
+            bookAuthorToken,
+            bookCategoryToken
+        })
+
+        const bookSaved = await bookSave.save();
+
+        if (bookSaved) {
+            res.status(200).json({ message: "Book has been saved" });
+        } else {
+            res.status(401).json({ message: "Book has not been added" });
+        }
+    } catch (error) {
+        res.status(401).json({ error });
+    }
 })
 
 
