@@ -304,7 +304,7 @@ router.get("/addAuthor", (req, res) => {
 
 // api to get all categories
 router.get("/addCategory", (req, res) => {
-    Author.find()
+    Category.find()
         .exec()
         .then((data) => {
             res.status(200).json({ data });
