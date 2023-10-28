@@ -385,7 +385,54 @@ router.post("/addBooks", upload.single("image"), async (req, res) => {
     }
 })
 
+// ends here
 
 
+// api to get all books
+router.get("/allBooks", (req, res)=>{
+    Book.find()
+    .exec()
+    .then((data)=>{
+        res.status(200).json({data});
+    })
+    .catch((error)=>{
+        res.status(401).json({error});
+    })
+})
+
+// ends here
+
+
+
+// api to get books by category
+router.get("/categoricalBooks/:token", async (req, res)=>{
+    const token = req.params.token;
+    
+    const categoryBooks = await Book.find({bookCategoryToken: token});
+
+    if(categoryBooks){
+        res.status(200).json({categoryBooks});
+    }else{
+        res.status(401).json({message:"No books by this category"});
+    }
+})
+
+// ends here
+
+
+// api to get books by category
+router.get("/authorBooks/:token", async (req, res)=>{
+    const token = req.params.token;
+    
+    const authorrBooks = await Book.find({bookAuthorToken: token});
+
+    if(authorrBooks){
+        res.status(200).json({authorrBooks});
+    }else{
+        res.status(401).json({message:"No books by this category"});
+    }
+})
+
+// ends here
 
 module.exports = router;
