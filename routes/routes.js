@@ -11,6 +11,7 @@ const cloudinary = require("cloudinary").v2;
 const Author = require("../models/authorModel");
 const Category = require("../models/categoryModel");
 const Book = require("../models/book");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 
 
@@ -389,15 +390,15 @@ router.post("/addBooks", upload.single("image"), async (req, res) => {
 
 
 // api to get all books
-router.get("/allBooks", (req, res)=>{
+router.get("/allBooks", (req, res) => {
     Book.find()
-    .exec()
-    .then((data)=>{
-        res.status(200).json({data});
-    })
-    .catch((error)=>{
-        res.status(401).json({error});
-    })
+        .exec()
+        .then((data) => {
+            res.status(200).json({ data });
+        })
+        .catch((error) => {
+            res.status(401).json({ error });
+        })
 })
 
 // ends here
@@ -405,15 +406,15 @@ router.get("/allBooks", (req, res)=>{
 
 
 // api to get books by category
-router.get("/categoricalBooks/:token", async (req, res)=>{
+router.get("/categoricalBooks/:token", async (req, res) => {
     const token = req.params.token;
-    
-    const categoryBooks = await Book.find({bookCategoryToken: token});
 
-    if(categoryBooks){
-        res.status(200).json({categoryBooks});
-    }else{
-        res.status(401).json({message:"No books by this category"});
+    const categoryBooks = await Book.find({ bookCategoryToken: token });
+
+    if (categoryBooks) {
+        res.status(200).json({ categoryBooks });
+    } else {
+        res.status(401).json({ message: "No books by this category" });
     }
 })
 
@@ -421,18 +422,80 @@ router.get("/categoricalBooks/:token", async (req, res)=>{
 
 
 // api to get books by category
-router.get("/authorBooks/:token", async (req, res)=>{
+router.get("/authorBooks/:token", async (req, res) => {
     const token = req.params.token;
-    
-    const authorrBooks = await Book.find({bookAuthorToken: token});
 
-    if(authorrBooks){
-        res.status(200).json({authorrBooks});
-    }else{
-        res.status(401).json({message:"No books by this category"});
+    const authorrBooks = await Book.find({ bookAuthorToken: token });
+
+    if (authorrBooks) {
+        res.status(200).json({ authorrBooks });
+    } else {
+        res.status(401).json({ message: "No books by this category" });
     }
 })
 
 // ends here
 
+
+// api to buy the book
+// first stripe step
+router.post("/cartFirstStep", async (req, res) => {
+    try {
+        const { name, email } = req.body;
+
+        // Check if a customer with the provided email already exists
+        const existingCustomer = await stripe.customers.list({ email: email, limit: 1 });
+
+        if (existingCustomer.data.length > 0) {
+            res.status(200).json({ message: 'Customer already exists', customer: existingCustomer.data[0] });
+            return;
+        }
+
+        // If the customer doesn't exist, create a new customer
+        const customer = await stripe.customers.create({
+            name: name,
+            email: email,
+        });
+
+        res.status(200).json({ customer });
+    } catch (error) {
+        console.log(error);
+        res.status(401).json({ error });
+    }
+});
+
+// ends here
+
+// 2nd stripe step
+
+// router.post("/cartSecondStep", async (req, res)=>{
+//     try {
+//         const {
+//             customer_id,
+//             card_Name,
+//             card_ExpYear,
+//             card_ExpMonth,
+//             card_Number,
+//             card_CVC,
+//         } = req.body;
+//         const card_token = await stripe.tokens.create({
+//             card:{
+//                 name: card_Name,
+//                 number: card_Number,
+//                 exp_year: card_ExpYear,
+//                 exp_month: card_ExpMonth,
+//                 cvc: card_CVC
+//             }
+//         });
+
+//         const card = await stripe.customers.createSource(customer_id, {
+//             source: `${card_token.id}`
+//         });
+//         res.status(200).json({card: card.id});
+//     } catch (error) {
+//         res.status(401).json({error});
+//     }
+// })
+
+// ends here
 module.exports = router;
