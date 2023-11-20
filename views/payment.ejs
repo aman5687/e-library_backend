@@ -1,0 +1,91 @@
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+    var stripe = Stripe('pk_test_51MgnFSSG27nKZ7VItx6iJhR4q2mClHnMRjs9IU8ARIIArZS64BFI7AZ9uLvDB1ycdIewQBtBVNloOkPR1fBjjgxu00g8744D8X');
+</script>
+
+<form id="payment-form">
+    <div class="form-group">
+        <label for="card-name">Cardholder Name</label>
+        <input type="text" id="card-name" required>
+    </div>
+    <div class="form-group">
+        <label for="card-number">Card Number</label>
+        <div id="card-number" style="width: 100%;"></div>
+    </div>
+    <div class="form-group">
+        <label for="card-expiry">Expiry Date</label>
+        <div id="card-expiry" style="width: 100%;"></div>
+    </div>
+    <div class="form-group">
+        <label for="card-cvc">CVC</label>
+        <div id="card-cvc" style="width: 100%;"></div>
+    </div>
+    <button type="button" id="submit-button">Submit Payment</button>
+</form>
+
+<script>
+    var elements = stripe.elements();
+
+    var style = {
+        base: {
+            fontSize: '16px',
+            color: '#32325d',
+        }
+    };
+
+    var cardNumber = elements.create('cardNumber', {
+        style: style
+    });
+
+    cardNumber.mount('#card-number');
+
+    var cardExpiry = elements.create('cardExpiry', {
+        'style': style
+    });
+    var cardCvc = elements.create('cardCvc', {
+        'style': style
+    });
+
+    cardExpiry.mount('#card-expiry');
+    cardCvc.mount('#card-cvc');
+
+    var form = document.getElementById('payment-form');
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        stripe.createToken(cardNumber).then(function (result) {
+            if (result.error) {
+                // Handle errors (e.g., show error messages to the user)
+                console.error(result.error.message);
+            } else {
+                // Send the token to your server
+                var token = result.token.id;
+                console.log(token);
+                submitPayment(token);
+            }
+        });
+    });
+
+    function submitPayment(token) {
+        // Send the token to your server
+        // You can use a library like Axios or fetch to make an HTTP request
+        // Example using fetch:
+        fetch('/cartSecondStep', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                customer_id: 'cus_P1qVLIKcKlDo1E', // Replace with your actual customer ID
+                card_token: token,
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => console.error(error));
+    }
+</script>

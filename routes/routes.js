@@ -468,34 +468,31 @@ router.post("/cartFirstStep", async (req, res) => {
 
 // 2nd stripe step
 
-// router.post("/cartSecondStep", async (req, res)=>{
-//     try {
-//         const {
-//             customer_id,
-//             card_Name,
-//             card_ExpYear,
-//             card_ExpMonth,
-//             card_Number,
-//             card_CVC,
-//         } = req.body;
-//         const card_token = await stripe.tokens.create({
-//             card:{
-//                 name: card_Name,
-//                 number: card_Number,
-//                 exp_year: card_ExpYear,
-//                 exp_month: card_ExpMonth,
-//                 cvc: card_CVC
-//             }
-//         });
+router.post("/cartSecondStep", async (req, res) => {
+    try {
+        const {
+            customer_id,
+            card_token,
+        } = req.body;
 
-//         const card = await stripe.customers.createSource(customer_id, {
-//             source: `${card_token.id}`
-//         });
-//         res.status(200).json({card: card.id});
-//     } catch (error) {
-//         res.status(401).json({error});
-//     }
-// })
+        // Attach the token to the customer
+        const card = await stripe.customers.createSource(customer_id, {
+            source: card_token,
+        });
+
+        res.status(200).json({ card: card.id });
+    } catch (error) {
+        res.status(401).json({ error: error.message });
+    }
+});
 
 // ends here
+
+// third step
+
+// router.post("/cartThirdStep", (req, res)=>{
+    
+// })
+// ends here
+
 module.exports = router;
