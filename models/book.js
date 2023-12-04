@@ -9,6 +9,14 @@ const bookSchema = new mongoose.Schema({
         type:String,
         required:true,
     },
+    bookFile:{
+        type:String,
+        required:true,
+    },
+    bookpublicId:{
+        type:String,
+        required:true,
+    },
     image:{
         type:String,
         required:true,

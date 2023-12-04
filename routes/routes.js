@@ -318,20 +318,25 @@ router.get("/addCategory", (req, res) => {
 
 // api to add books by admin
 
-router.post("/addBooks", upload.single("image"), async (req, res) => {
+router.post("/addBooks", upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'bookFile', maxCount: 1 }
+    ]), async (req, res) => {
     try {
-
         const bookName = req.body.bookName;
         const bookDesc = req.body.bookDesc;
-        const image = req.file.path;
         const token = uuidv4();
         const bookCategoryName = req.body.bookCategoryName;
         const bookAuthorName = req.body.bookAuthorName;
         const bookCategoryToken = req.body.bookCategoryToken;
         const bookAuthorToken = req.body.bookAuthorToken;
 
-        const errors = [];
+        const filesToUpload = [
+            {path: req.files.image[0].path, folder: 'book_upload_image'},
+            {path: req.files.bookFile[0].path, folder: 'book_file'},
+        ]
 
+        const errors = [];
 
         if (!bookName) {
             errors.push("Please enter book name");
@@ -339,10 +344,6 @@ router.post("/addBooks", upload.single("image"), async (req, res) => {
         }
         if (!bookDesc) {
             errors.push("Please enter book description");
-            return res.status(400).json({ errors });
-        }
-        if (!image) {
-            errors.push("Please enter book image");
             return res.status(400).json({ errors });
         }
         if (!bookCategoryName) {
@@ -354,19 +355,26 @@ router.post("/addBooks", upload.single("image"), async (req, res) => {
             return res.status(400).json({ errors });
         }
 
-
-        const imageUploadResult = await cloudinary.uploader.upload(image, { folder: "book_upload_image" }, function (err, result) {
-            if (err) {
-                res.status(401).json({ err });
+        const uploadFiles = await Promise.all(filesToUpload.map(async ({path, folder})=>{
+            try {
+                const result = await cloudinary.uploader.upload(path, {folder});
+                return {folder, result};
+            } catch (error) {
+                throw error;
             }
-        })
+        }));
 
-        imageUrl = imageUploadResult.secure_url;
+        const imageUrl = uploadFiles[0].result.secure_url;
+        console.log(imageUrl);
+        const bookUrl = uploadFiles[1].result.secure_url;
+        const bookpublic = uploadFiles[1].result.public_id;
 
         const bookSave = new Book({
             bookName,
             bookDesc,
             image: imageUrl,
+            bookFile: bookUrl,
+            bookpublicId: bookpublic,
             token,
             bookAuthorName,
             bookCategoryName,
@@ -382,6 +390,7 @@ router.post("/addBooks", upload.single("image"), async (req, res) => {
             res.status(401).json({ message: "Book has not been added" });
         }
     } catch (error) {
+        console.log(error);
         res.status(401).json({ error });
     }
 })
@@ -439,60 +448,74 @@ router.get("/authorBooks/:token", async (req, res) => {
 
 // api to buy the book
 // first stripe step
-router.post("/cartFirstStep", async (req, res) => {
-    try {
-        const { name, email } = req.body;
+// router.post("/cartFirstStep", async (req, res) => {
+//     try {
+//         const { name, email } = req.body;
 
-        // Check if a customer with the provided email already exists
-        const existingCustomer = await stripe.customers.list({ email: email, limit: 1 });
+//         // Check if a customer with the provided email already exists
+//         const existingCustomer = await stripe.customers.list({ email: email, limit: 1 });
 
-        if (existingCustomer.data.length > 0) {
-            res.status(200).json({ message: 'Customer already exists', customer: existingCustomer.data[0] });
-            return;
-        }
+//         if (existingCustomer.data.length > 0) {
+//             res.status(200).json({ message: 'Customer already exists', customer: existingCustomer.data[0] });
+//             return;
+//         }
 
-        // If the customer doesn't exist, create a new customer
-        const customer = await stripe.customers.create({
-            name: name,
-            email: email,
-        });
+//         // If the customer doesn't exist, create a new customer
+//         const customer = await stripe.customers.create({
+//             name: name,
+//             email: email,
+//         });
 
-        res.status(200).json({ customer });
-    } catch (error) {
-        console.log(error);
-        res.status(401).json({ error });
-    }
-});
+//         res.status(200).json({ customer });
+//     } catch (error) {
+//         console.log(error);
+//         res.status(401).json({ error });
+//     }
+// });
 
-// ends here
+// // ends here
 
-// 2nd stripe step
+// // 2nd stripe step
 
-router.post("/cartSecondStep", async (req, res) => {
-    try {
-        const {
-            customer_id,
-            card_token,
-        } = req.body;
+// router.post("/cartSecondStep", async (req, res) => {
+//     try {
+//         const {
+//             customer_id,
+//             card_token,
+//         } = req.body;
 
-        // Attach the token to the customer
-        const card = await stripe.customers.createSource(customer_id, {
-            source: card_token,
-        });
+//         // Attach the token to the customer
+//         const card = await stripe.customers.createSource(customer_id, {
+//             source: card_token,
+//         });
 
-        res.status(200).json({ card: card.id });
-    } catch (error) {
-        res.status(401).json({ error: error.message });
-    }
-});
+//         res.status(200).json({ card: card.id });
+//     } catch (error) {
+//         res.status(401).json({ error: error.message });
+//     }
+// });
 
-// ends here
+// // ends here
 
-// third step
+// // third step
 
-// router.post("/cartThirdStep", (req, res)=>{
-    
+// router.post("/cartThirdStep", async (req, res)=>{
+//     try {
+//         const createCharge = await stripe.charges.create({
+//             receipt_email:req.body.email,
+//             amount: parseInt(req.body.amount)*100,
+//             currency: 'INR',
+//             card: req.body.card_id,
+//             customer: req.body.customer_id
+//         });
+//         res.status(200).json({createCharge})
+//     } catch (error) {
+//         res.status(401).json({error});
+//     }
 // })
 // ends here
+
+
+// 
 
 module.exports = router;
