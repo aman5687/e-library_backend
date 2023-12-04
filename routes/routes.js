@@ -10,6 +10,7 @@ const bcrypt = require("bcryptjs");
 const cloudinary = require("cloudinary").v2;
 const Author = require("../models/authorModel");
 const Category = require("../models/categoryModel");
+const Bookings = require("../models/bookBookings");
 const Book = require("../models/book");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
@@ -321,7 +322,7 @@ router.get("/addCategory", (req, res) => {
 router.post("/addBooks", upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'bookFile', maxCount: 1 }
-    ]), async (req, res) => {
+]), async (req, res) => {
     try {
         const bookName = req.body.bookName;
         const bookDesc = req.body.bookDesc;
@@ -332,8 +333,8 @@ router.post("/addBooks", upload.fields([
         const bookAuthorToken = req.body.bookAuthorToken;
 
         const filesToUpload = [
-            {path: req.files.image[0].path, folder: 'book_upload_image'},
-            {path: req.files.bookFile[0].path, folder: 'book_file'},
+            { path: req.files.image[0].path, folder: 'book_upload_image' },
+            { path: req.files.bookFile[0].path, folder: 'book_file' },
         ]
 
         const errors = [];
@@ -355,10 +356,10 @@ router.post("/addBooks", upload.fields([
             return res.status(400).json({ errors });
         }
 
-        const uploadFiles = await Promise.all(filesToUpload.map(async ({path, folder})=>{
+        const uploadFiles = await Promise.all(filesToUpload.map(async ({ path, folder }) => {
             try {
-                const result = await cloudinary.uploader.upload(path, {folder});
-                return {folder, result};
+                const result = await cloudinary.uploader.upload(path, { folder });
+                return { folder, result };
             } catch (error) {
                 throw error;
             }
@@ -516,6 +517,80 @@ router.get("/authorBooks/:token", async (req, res) => {
 // ends here
 
 
-// 
+// api to cod of book
+
+
+router.post("/buyBoook", async (req, res) => {
+    try {
+        const bookToken = req.body.bookToken;
+        const userToken = req.body.userToken;
+        const bookingToken = uuidv4();
+
+        const bookBooking = new Bookings({  
+            bookToken,
+            userToken,
+            bookingToken,
+        })
+
+        const bookingDone = await bookBooking.save();
+
+        if (bookingDone) {
+            res.status(200).json({ bookingDone, message: "Booking has been done" });
+        } else {
+            res.status(401).json({ message: "Booking has not been saved" });
+        }
+    } catch (error) {
+        res.status(401).json({ error });
+    }
+})
+
+// ends here
+
+// api to show his bookings to user
+
+router.post("/userBookings", async (req, res)=>{
+    try {
+        const userToken = req.body.userToken;
+    
+        // finding users
+        const userBookings = await Bookings.find({userToken: userToken})
+
+        // gettig booktokens out
+        const onlyBookTokens = userBookings.map((tokens)=> tokens.bookToken);
+        
+        // then running the query to fetch books from those tokens from books table
+        const bookArray = await Promise.all(onlyBookTokens.map(async(token)=>{
+            const books = await Book.find({token:token});
+            return books.map((bookNames)=>{
+                return {
+                    bookName: bookNames.bookName,
+                    bookImage: bookNames.image,
+                }
+            });
+        }))
+        
+        const allBooks = bookArray.flat();
+    
+        if(allBooks.length> 0){
+            res.status(200).json({allBooks, message:"All books"});
+        }else{
+            res.status(401).json({message:"No Books for this user"});
+        }
+    } catch (error) {
+        res.status(401).json({error});
+    }
+})
+
+// ends here
+
+
+
+// api to show all the bookings to the user
+
+// router.get("/allBookings", async (req, res)=>{
+
+// })
+
+// ends here
 
 module.exports = router;
